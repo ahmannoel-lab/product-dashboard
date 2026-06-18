@@ -75,21 +75,14 @@
         </div>
     </div>
     <script>
-        // NOTE: Supabase credentials are placeholders. Inject your real anon key before use.
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const FUNCTION_URL = 'https://jnktvftylhlyfyuessay.supabase.co/functions/v1/product-approvals';
         let approvals = {};
         let allProducts = {};
-        async function apiCall(table, method = 'GET', query = '', body = null) {
-            const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
+        async function apiCall(action, body = null) {
+            const url = `${FUNCTION_URL}?action=${action}`;
             const options = {
-                method,
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                }
+                method: body ? 'PATCH' : 'GET',
+                headers: { 'Content-Type': 'application/json' },
             };
             if (body) options.body = JSON.stringify(body);
             const response = await fetch(url, options);
@@ -98,8 +91,7 @@
         }
         async function loadProducts() {
             try {
-                const products = await apiCall('product_shots', 'GET', '?raw_image_source=eq.shopify-scrape&select=id,product_name,sku,raw_image_url,brand_id');
-                const brands = await apiCall('brands', 'GET', '?select=id,name');
+                const { products, brands } = await apiCall('products');
                 const brandMap = {};
                 brands.forEach(b => brandMap[b.id] = b.name);
                 allProducts = {};
@@ -154,7 +146,7 @@
             if (approved.length === 0) { alert('Please select a product & grade for at least one brand'); return; }
             try {
                 for (const [brandId, approval] of approved) {
-                    await apiCall('product_shots', 'PATCH', `?id=eq.${approval.productId}`, { approved_for_generation: true, reviewed_at: new Date().toISOString(), approval_notes: approval.grade });
+                    await apiCall('approve', { productId: approval.productId, grade: approval.grade });
                 }
                 document.getElementById('successMsg').classList.add('show');
                 setTimeout(() => { document.getElementById('successMsg').classList.remove('show'); }, 3000);
