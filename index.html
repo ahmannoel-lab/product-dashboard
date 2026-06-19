@@ -7,15 +7,24 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f9f9f9; color: #1a1a1a; line-height: 1.6; }
-        .header { background: white; border-bottom: 1px solid #e0e0e0; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .header { background: white; border-bottom: 1px solid #e0e0e0; padding: 1.5rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 50; }
+        .header-row { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
         .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-        h1 { font-size: 28px; font-weight: 600; margin-bottom: 0.5rem; }
-        .subtitle { font-size: 14px; color: #666; margin-bottom: 1rem; }
-        .brands-grid { display: grid; gap: 2rem; margin-top: 2rem; }
-        .brand-section { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 2rem; }
-        .brand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f0f0; }
+        h1 { font-size: 24px; font-weight: 600; margin-bottom: 0.25rem; }
+        .subtitle { font-size: 14px; color: #666; }
+        .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+        .count-badge { font-size: 13px; font-weight: 600; color: #0066cc; background: #f0f5ff; border: 1px solid #cfe0ff; padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+        .refresh-btn { padding: 8px 16px; border: 1px solid #0066cc; background: #0066cc; color: white; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
+        .refresh-btn:hover { background: #0052a3; }
+        .refresh-btn:disabled { opacity: 0.6; cursor: default; }
+        .brands-grid { display: grid; gap: 2rem; margin-top: 1rem; }
+        .brand-section { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 2rem; transition: opacity 0.25s, transform 0.25s; }
+        .brand-section.removing { opacity: 0; transform: scale(0.98); }
+        .brand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f0f0; gap: 1rem; flex-wrap: wrap; }
         .brand-name { font-size: 20px; font-weight: 600; }
-        .brand-stats { display: flex; gap: 1rem; font-size: 13px; color: #666; }
+        .brand-stats { display: flex; gap: 1rem; font-size: 13px; color: #666; align-items: center; }
+        .ready-pill { font-weight: 600; color: #b26a00; }
+        .ready-pill.ready { color: #1a7f37; }
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
         .product-card { border: 2px solid #e0e0e0; border-radius: 6px; overflow: hidden; transition: all 0.2s; cursor: pointer; background: white; }
         .product-card:hover { border-color: #0066cc; box-shadow: 0 4px 12px rgba(0,102,204,0.1); }
@@ -34,30 +43,50 @@
         .quality-btn { padding: 8px 16px; border: 1px solid #d0d0d0; background: white; border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.2s; font-weight: 500; }
         .quality-btn:hover { border-color: #999; background: #f9f9f9; }
         .quality-btn.selected { background: #0066cc; color: white; border-color: #0066cc; }
-        .summary { position: fixed; bottom: 0; right: 0; background: white; border-left: 1px solid #e0e0e0; border-top: 1px solid #e0e0e0; padding: 1.5rem; width: 350px; max-height: 100vh; overflow-y: auto; box-shadow: -2px 2px 8px rgba(0,0,0,0.1); }
-        .summary h2 { font-size: 16px; margin-bottom: 1rem; }
-        .summary-item { display: flex; justify-content: space-between; padding: 0.75rem; background: #f9f9f9; border-radius: 4px; margin-bottom: 0.75rem; font-size: 13px; }
+        .brand-actions { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #f0f0f0; display: flex; gap: 0.75rem; align-items: center; }
+        .btn-submit { padding: 10px 20px; border: 1px solid #1a7f37; background: #1a7f37; color: white; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .btn-submit:hover { background: #156c2e; }
+        .btn-submit:disabled { background: #e0e0e0; border-color: #e0e0e0; color: #999; cursor: default; }
+        .btn-skip { padding: 10px 16px; border: 1px solid #d0d0d0; background: white; color: #666; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 13px; transition: all 0.2s; }
+        .btn-skip:hover { background: #f5f5f5; border-color: #b0b0b0; color: #333; }
+        .brand-hint { font-size: 12px; color: #999; }
+        .summary { position: fixed; bottom: 0; right: 0; background: white; border-left: 1px solid #e0e0e0; border-top: 1px solid #e0e0e0; padding: 1.5rem; width: 350px; max-height: 100vh; overflow-y: auto; box-shadow: -2px 2px 8px rgba(0,0,0,0.1); z-index: 40; }
+        .summary h2 { font-size: 16px; margin-bottom: 0.25rem; }
+        .summary-sub { font-size: 12px; color: #999; margin-bottom: 1rem; }
+        .progress-wrap { background: #f0f0f0; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 1rem; }
+        .progress-bar { height: 100%; background: #1a7f37; width: 0%; transition: width 0.3s; }
+        .session-stat { display: flex; justify-content: space-between; font-size: 13px; padding: 0.4rem 0; }
+        .session-stat b { font-weight: 600; }
+        .summary-item { display: flex; justify-content: space-between; padding: 0.6rem 0.75rem; background: #f9f9f9; border-radius: 4px; margin-bottom: 0.5rem; font-size: 13px; }
         .summary-brand { font-weight: 600; }
         .summary-grade { color: #666; font-size: 12px; }
-        .summary-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; }
-        .btn { flex: 1; padding: 10px; border: 1px solid #d0d0d0; background: white; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; }
+        .summary-actions { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .btn { padding: 10px; border: 1px solid #d0d0d0; background: white; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; width: 100%; }
         .btn:hover { background: #f0f0f0; }
         .btn-primary { background: #0066cc; color: white; border-color: #0066cc; }
         .btn-primary:hover { background: #0052a3; }
-        .success-message { background: #d4edda; color: #155724; padding: 1rem; border-radius: 4px; margin-top: 1rem; font-size: 13px; display: none; }
-        .success-message.show { display: block; }
         .main-content { margin-right: 370px; }
         @media (max-width: 1024px) { .summary { width: 300px; } .main-content { margin-right: 320px; } }
         @media (max-width: 768px) { .summary { position: static; width: 100%; border: 1px solid #e0e0e0; margin-top: 2rem; } .main-content { margin-right: 0; } }
         .loading { text-align: center; padding: 3rem; color: #666; }
         .error { background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+        .empty-state { text-align: center; padding: 4rem 2rem; }
+        .empty-state .big { font-size: 48px; margin-bottom: 1rem; }
+        .empty-state h2 { font-size: 22px; margin-bottom: 0.5rem; }
+        .empty-state p { color: #666; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="container">
-            <h1>📸 Product Approval Dashboard</h1>
-            <p class="subtitle">Approve one product per brand & grade quality needs</p>
+        <div class="header-row">
+            <div>
+                <h1>📸 Product Approval Dashboard</h1>
+                <p class="subtitle">Approve one product per brand &amp; grade quality needs</p>
+            </div>
+            <div class="header-actions">
+                <span class="count-badge" id="remainingBadge">— brands left</span>
+                <button class="refresh-btn" id="refreshBtn" onclick="refresh()">↻ Refresh</button>
+            </div>
         </div>
     </div>
     <div class="container">
@@ -65,25 +94,27 @@
             <div id="content" class="loading">Loading products...</div>
         </div>
         <div class="summary">
-            <h2>Approvals</h2>
-            <div id="summary-list"></div>
+            <h2>This session</h2>
+            <p class="summary-sub" id="sessionSub">Submit each brand to clear it from the queue</p>
+            <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+            <div class="session-stat"><span>Brands remaining</span><b id="statRemaining">—</b></div>
+            <div class="session-stat"><span>Approved this session</span><b id="statApproved">0</b></div>
+            <div class="session-stat"><span>Skipped this session</span><b id="statSkipped">0</b></div>
+            <div id="summary-list" style="margin-top:1rem;"></div>
             <div class="summary-actions">
-                <button class="btn btn-primary" onclick="submitApprovals()">Save to DB</button>
-                <button class="btn" onclick="clearAll()">Clear</button>
+                <button class="btn btn-primary" onclick="submitAllReady()">Submit all ready brands</button>
+                <button class="btn" onclick="refresh()">↻ Refresh queue</button>
             </div>
-            <div class="success-message" id="successMsg">✓ Saved to Supabase!</div>
         </div>
     </div>
     <script>
         const FUNCTION_URL = 'https://jnktvftylhlyfyuessay.supabase.co/functions/v1/product-approvals';
         let approvals = {};
         let allProducts = {};
+        const session = { approved: [], skipped: [] };
         async function apiCall(action, body = null) {
             const url = `${FUNCTION_URL}?action=${action}`;
-            const options = {
-                method: body ? 'PATCH' : 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            };
+            const options = { method: body ? 'PATCH' : 'GET', headers: { 'Content-Type': 'application/json' } };
             if (body) options.body = JSON.stringify(body);
             const response = await fetch(url, options);
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
@@ -95,9 +126,9 @@
                 const brandMap = {};
                 brands.forEach(b => brandMap[b.id] = b.name);
                 allProducts = {};
-                products.forEach(product => {
+                (products || []).forEach(product => {
                     const brandId = product.brand_id;
-                    if (!allProducts[brandId]) allProducts[brandId] = { name: brandMap[brandId], products: [] };
+                    if (!allProducts[brandId]) allProducts[brandId] = { name: brandMap[brandId] || 'Unknown brand', products: [] };
                     allProducts[brandId].products.push(product);
                 });
                 renderProducts();
@@ -106,15 +137,59 @@
             }
         }
         function renderProducts() {
+            const brandIds = Object.keys(allProducts);
+            if (brandIds.length === 0) {
+                document.getElementById('content').className = '';
+                document.getElementById('content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="big">🎉</div>
+                        <h2>Queue cleared</h2>
+                        <p>No brands left to review. Load more leads, then hit Refresh.</p>
+                    </div>`;
+                updateChrome();
+                return;
+            }
+            document.getElementById('content').className = '';
             let html = '<div class="brands-grid">';
             Object.entries(allProducts).forEach(([brandId, brand]) => {
                 const products = brand.products;
                 const selected = approvals[brandId];
-                html += `<div class="brand-section"><div class="brand-header"><div class="brand-name">${brand.name}</div><div class="brand-stats"><span>${selected ? '✓ Approved' : 'Pending'}</span><span>${products.length} products</span></div></div><div class="products-grid">${products.map(product => `<div class="product-card ${selected?.productId === product.id ? 'selected' : ''}" onclick="selectProduct('${brandId}', '${product.id}')"><div class="product-image">${selected?.productId === product.id ? '<div class="checkmark">✓</div>' : ''}<img src="${product.raw_image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'image-loading\\'>Failed to load</span>'"></div><div class="product-info"><div class="product-name">${product.product_name}</div><div class="product-type">${product.sku}</div></div></div>`).join('')}</div><div class="quality-section"><div class="quality-label">Quality grade:</div><div class="quality-buttons">${['High Need', 'Medium Need', 'Low Need'].map(grade => `<button class="quality-btn ${selected?.grade === grade ? 'selected' : ''}" onclick="selectGrade('${brandId}', '${grade}')">${grade}</button>`).join('')}</div></div></div>`;
+                const ready = !!(selected && selected.productId && selected.grade);
+                html += `<div class="brand-section" id="brand-${brandId}">
+                    <div class="brand-header">
+                        <div class="brand-name">${brand.name}</div>
+                        <div class="brand-stats">
+                            <span class="ready-pill ${ready ? 'ready' : ''}">${ready ? '✓ Ready' : 'Pending'}</span>
+                            <span>${products.length} products</span>
+                        </div>
+                    </div>
+                    <div class="products-grid">${products.map(product => `
+                        <div class="product-card ${selected && selected.productId === product.id ? 'selected' : ''}" onclick="selectProduct('${brandId}', '${product.id}')">
+                            <div class="product-image">${selected && selected.productId === product.id ? '<div class="checkmark">✓</div>' : ''}
+                                <img src="${product.raw_image_url}" alt="${(product.product_name || '').replace(/"/g, '&quot;')}" onerror="this.parentElement.innerHTML='<span class=\\'image-loading\\'>Failed to load</span>'">
+                            </div>
+                            <div class="product-info">
+                                <div class="product-name">${product.product_name || 'Untitled'}</div>
+                                <div class="product-type">${product.sku || ''}</div>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                    <div class="quality-section">
+                        <div class="quality-label">Quality grade:</div>
+                        <div class="quality-buttons">${['High Need', 'Medium Need', 'Low Need'].map(grade => `
+                            <button class="quality-btn ${selected && selected.grade === grade ? 'selected' : ''}" onclick="selectGrade('${brandId}', '${grade}')">${grade}</button>`).join('')}
+                        </div>
+                    </div>
+                    <div class="brand-actions">
+                        <button class="btn-submit" id="submit-${brandId}" ${ready ? '' : 'disabled'} onclick="submitBrand('${brandId}')">✓ Submit &amp; Remove</button>
+                        <button class="btn-skip" onclick="skipBrand('${brandId}')">Skip brand</button>
+                        <span class="brand-hint">${ready ? 'Saves this pick and clears the brand' : 'Pick a product and a grade to enable'}</span>
+                    </div>
+                </div>`;
             });
             html += '</div>';
             document.getElementById('content').innerHTML = html;
-            updateSummary();
+            updateChrome();
         }
         function selectProduct(brandId, productId) {
             if (!approvals[brandId]) approvals[brandId] = {};
@@ -126,37 +201,85 @@
             approvals[brandId].grade = grade;
             renderProducts();
         }
-        function updateSummary() {
-            const summaryList = document.getElementById('summary-list');
-            const approved = Object.entries(approvals).filter(([_, a]) => a.productId && a.grade);
-            if (approved.length === 0) {
-                summaryList.innerHTML = '<p style="color: #999; font-size: 13px;">Select a product & grade for each brand</p>';
-                return;
-            }
-            let html = '';
-            approved.forEach(([brandId, approval]) => {
-                const brand = allProducts[brandId];
-                const gradeEmoji = { 'High Need': '🔴', 'Medium Need': '🟡', 'Low Need': '🟢' }[approval.grade];
-                html += `<div class="summary-item"><div><div class="summary-brand">${brand.name}</div><div class="summary-grade">${gradeEmoji} ${approval.grade}</div></div></div>`;
-            });
-            summaryList.innerHTML = html;
+        function animateRemove(brandId, after) {
+            const el = document.getElementById('brand-' + brandId);
+            if (el) { el.classList.add('removing'); setTimeout(after, 220); } else { after(); }
         }
-        async function submitApprovals() {
-            const approved = Object.entries(approvals).filter(([_, a]) => a.productId && a.grade);
-            if (approved.length === 0) { alert('Please select a product & grade for at least one brand'); return; }
+        async function submitBrand(brandId) {
+            const a = approvals[brandId];
+            if (!a || !a.productId || !a.grade) { alert('Pick a product and a grade first.'); return; }
+            const btn = document.getElementById('submit-' + brandId);
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             try {
-                for (const [brandId, approval] of approved) {
-                    await apiCall('approve', { productId: approval.productId, grade: approval.grade });
-                }
-                document.getElementById('successMsg').classList.add('show');
-                setTimeout(() => { document.getElementById('successMsg').classList.remove('show'); }, 3000);
+                await apiCall('approve', { productId: a.productId, grade: a.grade });
+                session.approved.push({ name: allProducts[brandId].name, grade: a.grade });
+                animateRemove(brandId, () => {
+                    delete allProducts[brandId];
+                    delete approvals[brandId];
+                    renderProducts();
+                });
             } catch (err) {
                 alert('Error saving: ' + err.message);
+                if (btn) { btn.disabled = false; btn.textContent = '✓ Submit & Remove'; }
             }
         }
-        function clearAll() {
-            approvals = {};
+        async function skipBrand(brandId) {
+            const name = allProducts[brandId] ? allProducts[brandId].name : 'this brand';
+            if (!confirm(`Skip "${name}"? It will be marked reviewed and removed from the queue (no product approved).`)) return;
+            try {
+                await apiCall('skip', { brandId });
+                session.skipped.push({ name });
+                animateRemove(brandId, () => {
+                    delete allProducts[brandId];
+                    delete approvals[brandId];
+                    renderProducts();
+                });
+            } catch (err) {
+                alert('Error skipping: ' + err.message);
+            }
+        }
+        async function submitAllReady() {
+            const ready = Object.entries(approvals).filter(([bid, a]) => a.productId && a.grade && allProducts[bid]).map(([bid]) => bid);
+            if (ready.length === 0) { alert('No brands have both a product and a grade selected yet.'); return; }
+            if (!confirm(`Submit ${ready.length} ready brand(s) and remove them from the queue?`)) return;
+            for (const brandId of ready) {
+                const a = approvals[brandId];
+                try {
+                    await apiCall('approve', { productId: a.productId, grade: a.grade });
+                    session.approved.push({ name: allProducts[brandId].name, grade: a.grade });
+                    delete allProducts[brandId];
+                    delete approvals[brandId];
+                } catch (err) { alert('Error saving ' + (allProducts[brandId] ? allProducts[brandId].name : brandId) + ': ' + err.message); }
+            }
             renderProducts();
+        }
+        async function refresh() {
+            const btn = document.getElementById('refreshBtn');
+            if (btn) { btn.disabled = true; btn.textContent = '↻ Refreshing…'; }
+            document.getElementById('content').className = 'loading';
+            document.getElementById('content').innerHTML = 'Refreshing queue…';
+            await loadProducts();
+            if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+        }
+        function updateChrome() {
+            const remaining = Object.keys(allProducts).length;
+            const done = session.approved.length + session.skipped.length;
+            const total = remaining + done;
+            document.getElementById('remainingBadge').textContent = remaining + (remaining === 1 ? ' brand left' : ' brands left');
+            document.getElementById('statRemaining').textContent = remaining;
+            document.getElementById('statApproved').textContent = session.approved.length;
+            document.getElementById('statSkipped').textContent = session.skipped.length;
+            document.getElementById('progressBar').style.width = total > 0 ? Math.round((done / total) * 100) + '%' : '0%';
+            const list = document.getElementById('summary-list');
+            const items = [
+                ...session.approved.map(s => ({ name: s.name, tag: { 'High Need': '🔴', 'Medium Need': '🟡', 'Low Need': '🟢' }[s.grade] + ' ' + s.grade })),
+                ...session.skipped.map(s => ({ name: s.name, tag: '⏭ Skipped' }))
+            ];
+            if (items.length === 0) {
+                list.innerHTML = '<p style="color:#999;font-size:13px;">Nothing submitted yet this session.</p>';
+            } else {
+                list.innerHTML = items.map(i => `<div class="summary-item"><div class="summary-brand">${i.name}</div><div class="summary-grade">${i.tag}</div></div>`).join('');
+            }
         }
         loadProducts();
     </script>
