@@ -81,7 +81,7 @@
         <div class="header-row">
             <div>
                 <h1>📸 Product Approval Dashboard</h1>
-                <p class="subtitle">Approve one product per brand &amp; grade quality needs</p>
+                <p class="subtitle">Select one or more products per brand &amp; grade quality needs</p>
             </div>
             <div class="header-actions">
                 <span class="count-badge" id="remainingBadge">— brands left</span>
@@ -154,18 +154,20 @@
             Object.entries(allProducts).forEach(([brandId, brand]) => {
                 const products = brand.products;
                 const selected = approvals[brandId];
-                const ready = !!(selected && selected.productId && selected.grade);
+                const picks = (selected && selected.productIds) ? selected.productIds.length : 0;
+                const ready = !!(picks && selected.grade);
                 html += `<div class="brand-section" id="brand-${brandId}">
                     <div class="brand-header">
                         <div class="brand-name">${brand.name}</div>
                         <div class="brand-stats">
                             <span class="ready-pill ${ready ? 'ready' : ''}">${ready ? '✓ Ready' : 'Pending'}</span>
+                            <span>${picks} selected</span>
                             <span>${products.length} products</span>
                         </div>
                     </div>
                     <div class="products-grid">${products.map(product => `
-                        <div class="product-card ${selected && selected.productId === product.id ? 'selected' : ''}" onclick="selectProduct('${brandId}', '${product.id}')">
-                            <div class="product-image">${selected && selected.productId === product.id ? '<div class="checkmark">✓</div>' : ''}
+                        <div class="product-card ${selected && selected.productIds && selected.productIds.includes(product.id) ? 'selected' : ''}" onclick="selectProduct('${brandId}', '${product.id}')">
+                            <div class="product-image">${selected && selected.productIds && selected.productIds.includes(product.id) ? '<div class="checkmark">✓</div>' : ''}
                                 <img src="${product.raw_image_url}" alt="${(product.product_name || '').replace(/"/g, '&quot;')}" onerror="this.parentElement.innerHTML='<span class=\\'image-loading\\'>Failed to load</span>'">
                             </div>
                             <div class="product-info">
@@ -183,7 +185,7 @@
                     <div class="brand-actions">
                         <button class="btn-submit" id="submit-${brandId}" ${ready ? '' : 'disabled'} onclick="submitBrand('${brandId}')">✓ Submit &amp; Remove</button>
                         <button class="btn-skip" onclick="skipBrand('${brandId}')">Skip brand</button>
-                        <span class="brand-hint">${ready ? 'Saves this pick and clears the brand' : 'Pick a product and a grade to enable'}</span>
+                        <span class="brand-hint">${ready ? `Saves ${picks} pick${picks === 1 ? '' : 's'} and clears the brand` : 'Pick at least one product and a grade to enable'}</span>
                     </div>
                 </div>`;
             });
@@ -193,7 +195,10 @@
         }
         function selectProduct(brandId, productId) {
             if (!approvals[brandId]) approvals[brandId] = {};
-            approvals[brandId].productId = productId;
+            if (!approvals[brandId].productIds) approvals[brandId].productIds = [];
+            const arr = approvals[brandId].productIds;
+            const i = arr.indexOf(productId);
+            if (i === -1) { arr.push(productId); } else { arr.splice(i, 1); }
             renderProducts();
         }
         function selectGrade(brandId, grade) {
@@ -207,12 +212,12 @@
         }
         async function submitBrand(brandId) {
             const a = approvals[brandId];
-            if (!a || !a.productId || !a.grade) { alert('Pick a product and a grade first.'); return; }
+            if (!a || !a.productIds || !a.productIds.length || !a.grade) { alert('Pick at least one product and a grade first.'); return; }
             const btn = document.getElementById('submit-' + brandId);
             if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
             try {
-                await apiCall('approve', { productId: a.productId, grade: a.grade });
-                session.approved.push({ name: allProducts[brandId].name, grade: a.grade });
+                await apiCall('approve', { productIds: a.productIds, grade: a.grade });
+                session.approved.push({ name: allProducts[brandId].name, grade: a.grade, count: a.productIds.length });
                 animateRemove(brandId, () => {
                     delete allProducts[brandId];
                     delete approvals[brandId];
@@ -239,14 +244,14 @@
             }
         }
         async function submitAllReady() {
-            const ready = Object.entries(approvals).filter(([bid, a]) => a.productId && a.grade && allProducts[bid]).map(([bid]) => bid);
-            if (ready.length === 0) { alert('No brands have both a product and a grade selected yet.'); return; }
+            const ready = Object.entries(approvals).filter(([bid, a]) => a.productIds && a.productIds.length && a.grade && allProducts[bid]).map(([bid]) => bid);
+            if (ready.length === 0) { alert('No brands have at least one product and a grade selected yet.'); return; }
             if (!confirm(`Submit ${ready.length} ready brand(s) and remove them from the queue?`)) return;
             for (const brandId of ready) {
                 const a = approvals[brandId];
                 try {
-                    await apiCall('approve', { productId: a.productId, grade: a.grade });
-                    session.approved.push({ name: allProducts[brandId].name, grade: a.grade });
+                    await apiCall('approve', { productIds: a.productIds, grade: a.grade });
+                    session.approved.push({ name: allProducts[brandId].name, grade: a.grade, count: a.productIds.length });
                     delete allProducts[brandId];
                     delete approvals[brandId];
                 } catch (err) { alert('Error saving ' + (allProducts[brandId] ? allProducts[brandId].name : brandId) + ': ' + err.message); }
@@ -272,7 +277,7 @@
             document.getElementById('progressBar').style.width = total > 0 ? Math.round((done / total) * 100) + '%' : '0%';
             const list = document.getElementById('summary-list');
             const items = [
-                ...session.approved.map(s => ({ name: s.name, tag: { 'High Need': '🔴', 'Medium Need': '🟡', 'Low Need': '🟢' }[s.grade] + ' ' + s.grade })),
+                ...session.approved.map(s => ({ name: s.name, tag: { 'High Need': '🔴', 'Medium Need': '🟡', 'Low Need': '🟢' }[s.grade] + ' ' + s.grade + (s.count ? ` · ${s.count} pick${s.count === 1 ? '' : 's'}` : '') })),
                 ...session.skipped.map(s => ({ name: s.name, tag: '⏭ Skipped' }))
             ];
             if (items.length === 0) {
